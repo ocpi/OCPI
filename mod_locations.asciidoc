@@ -631,7 +631,6 @@ An _EVSE_ object has a list of Connectors which can not be used simultaneously: 
 [cols="7,5,2,18",options="header"]
 |===
 |Property |Type |Card. |Description 
-
 |uid |<<types.asciidoc#types_cistring_type,CiString>>(36) |1 |Uniquely identifies the EVSE within the CPOs platform (and suboperator platforms). This field can never be changed, modified or renamed. This is the 'technical' identification of the EVSE, not to be used as 'human readable' identification, use the field `evse_id` for that. +
 This field is named `uid` instead of `id`, because `id` could be confused with `evse_id` which is an eMI3 defined field. +
 Note that in order to fulfill both the requirement that an EVSE's `uid` be unique within a CPO's platform and the <<evse_delete_with_status_update,requirement that EVSEs are never deleted>>, a CPO will typically want to avoid using identifiers of the physical hardware for this `uid` property. If they do use such a physical identifier, they will find themselves breaking the uniqueness requirement for `uid` when the same physical EVSE is redeployed at another Location.
@@ -645,7 +644,8 @@ Note that in order to fulfill both the requirement that an EVSE's `uid` be uniqu
 |physical_reference |<<types.asciidoc#types_string_type,string>>(16) |? |A number/string printed on the outside of the EVSE for visual identification. 
 |directions |<<types.asciidoc#types_displaytext_class,DisplayText>> |* |Multi-language human-readable directions when more detailed information on how to reach the EVSE from the _Location_ is required. 
 |parking_restrictions |<<mod_locations_parkingrestriction_enum,ParkingRestriction>> |* |The restrictions that apply to the parking spot. 
-|images |<<mod_locations_image_class,Image>> |* |Links to images related to the EVSE such as photos or logos. 
+|vehicle_types |<<mod_locations_vehicletype_enum,VehicleType>> |+ | The vehicle types that the EVSE is intended for and that the associated parking is designed to accomodate.
+|images |<<mod_locations_image_class,Image>> |* | Links to images related to the EVSE such as photos or logos. At least one photograph should be provided if the value of vehicle_types includes the `DISABLED` vehicle type.
 |last_updated |<<types.asciidoc#types_datetime_type,DateTime>> |1 |Timestamp when this EVSE or one of its Connectors was last updated (or created). 
 |===
 
@@ -717,7 +717,7 @@ This class defines an additional geo location that is relevant for the Charge Po
 
 
 [[mod_locations_capability_enum]]
-==== Capability _enum_
+==== Capability _OpenEnum_
 
 The capabilities of an EVSE.
 
@@ -731,6 +731,8 @@ The capabilities of an EVSE.
 |CONTACTLESS_CARD_SUPPORT |EVSE has a payment terminal that supports contactless cards.
 |CREDIT_CARD_PAYABLE |EVSE has a payment terminal that makes it possible to pay for charging using a credit card.
 |DEBIT_CARD_PAYABLE |EVSE has a payment terminal that makes it possible to pay for charging using a debit card.
+|ISO_15118_2_PLUG_AND_CHARGE |The EVSE supports authentication of the Driver using a contract certificate stored in the vehicle according to ISO 15118-2.
+|ISO_15118_20_PLUG_AND_CHARGE |The EVSE supports authentication of the Driver using a contract certificate stored in the vehicle according to ISO 15118-20.
 |PED_TERMINAL |EVSE has a payment terminal with a pin-code entry device.
 |REMOTE_START_STOP_CAPABLE |The EVSE can remotely be <<mod_commands.asciidoc#mod_commands_startsession_object,started>>/<<mod_commands.asciidoc#mod_commands_stopsession_object,stopped>>.
 |RESERVABLE |The EVSE can be <<mod_commands.asciidoc#mod_commands_reservenow_object,reserved>>.
@@ -739,6 +741,8 @@ The capabilities of an EVSE.
 |TOKEN_GROUP_CAPABLE |This EVSE supports token groups, two or more tokens work as one, so that a session can be started with one token and stopped with another (handy when a card and key-fob are given to the EV-driver).
 |UNLOCK_CAPABLE |Connectors have mechanical lock that can be requested by the eMSP to be <<mod_commands.asciidoc#mod_commands_unlockconnector_object,unlocked>>.
 |===
+
+NOTE: The Plug and Charge related capabilities are meant to signal that a Driver can indeed use ISO 15118 Plug and Charge at this EVSE. Mere support for a standard by the charging hardware is not enough to warrant the presence of these capabilities.
 
 When a Charge Point supports ad-hoc payments with a payment terminal, please use a combination of the following values to explain the possibilities of the terminal:
 CHIP_CARD_SUPPORT, CONTACTLESS_CARD_SUPPORT, CREDIT_CARD_PAYABLE, DEBIT_CARD_PAYABLE, PED_TERMINAL.
@@ -760,7 +764,7 @@ The format of the connector, whether it is a socket or a plug.
 |===
 
 [[mod_locations_connectortype_enum]]
-==== ConnectorType _enum_
+==== ConnectorType _OpenEnum_
 
 The socket or plug standard of the charging point.
 
@@ -797,6 +801,7 @@ The socket or plug standard of the charging point.
 |IEC_62196_T2_COMBO |Combo Type 2 based, DC 
 |IEC_62196_T3A |IEC 62196 Type 3A 
 |IEC_62196_T3C |IEC 62196 Type 3C "Scame"
+|MCS         |The MegaWatt Charging System (MCS) connector as developed by CharIN
 |NEMA_5_20   |NEMA 5-20, 3 pins
 |NEMA_6_30   |NEMA 6-30, 3 pins
 |NEMA_6_50   |NEMA 6-50, 3 pins
@@ -806,8 +811,9 @@ The socket or plug standard of the charging point.
 |NEMA_14_50  |NEMA 14-50, 3 pins, rating of 50 A
 |PANTOGRAPH_BOTTOM_UP|On-board Bottom-up-Pantograph typically for bus charging
 |PANTOGRAPH_TOP_DOWN|Off-board Top-down-Pantograph typically for bus charging
+|SAE_J3400 | SAE J3400, also known as North American Charging Standard (NACS), developed by Tesla, Inc in 2021.
 |TESLA_R |Tesla Connector "Roadster"-type (round, 4 pin)
-|TESLA_S |Tesla Connector "Model-S"-type (oval, 5 pin)
+|TESLA_S |Tesla Connector "Model-S"-type (oval, 5 pin). Mechanically compatible with SAE J3400 but uses CAN bus for communication instead of power line communication.
 |===
 
 [[mod_locations_energymix_class]]
@@ -904,7 +910,7 @@ Amount of waste produced/emitted per kWh.
 |===
 
 [[mod_locations_environmentalimpactcategory_enum]]
-==== EnvironmentalImpactCategory _enum_
+==== EnvironmentalImpactCategory _OpenEnum_
 
 Categories of environmental impact values.
 
@@ -931,7 +937,7 @@ Specifies one exceptional period for opening or access hours.
 
 
 [[mod_locations_facility_enum]]
-==== Facility _enum_
+==== Facility _OpenEnum_
 
 [cols="3,10",options="header"]
 |===
@@ -1067,7 +1073,7 @@ If not squared, thumbnails should have the same orientation as the original.
 |===
 
 [[mod_locations_imagecategory_enum]]
-==== ImageCategory _enum_
+==== ImageCategory _OpenEnum_
 
 The category of an image to obtain the correct usage in a user presentation.
 The category has to be set accordingly to the image content in order to guarantee the right usage.
@@ -1086,23 +1092,23 @@ The category has to be set accordingly to the image content in order to guarante
 |===
 
 [[mod_locations_parkingrestriction_enum]]
-==== ParkingRestriction _enum_
+==== ParkingRestriction _OpenEnum_
 
 This value, if provided, represents the restriction to the parking spot for different purposes.
 
 [cols="3,10",options="header"]
 |===
-|Value |Description 
-
-|EV_ONLY |Reserved parking spot for electric vehicles. 
-|PLUGGED |Parking is only allowed while plugged in (charging). 
-|DISABLED |Reserved parking spot for disabled people with valid ID. 
+|Value     |Description
+|EMPLOYEES |Parking only for people who work at a site, building, or complex that the Location belongs to.
+|EV_ONLY   |Reserved parking spot for electric vehicles.
+|PLUGGED   |Parking is only allowed while plugged in (charging).
 |CUSTOMERS |Parking spot for customers/guests only, for example in case of a hotel or shop.
-|MOTORCYCLES |Parking spot only suitable for (electric) motorcycles or scooters. 
+|TAXI      |Parking only for taxi vehicles.
+|TENANTS   |Parking only for people who live in a complex that the Location belongs to.
 |===
 
 [[mod_locations_parkingtype_enum]]
-==== ParkingType _enum_
+==== ParkingType _OpenEnum_
 
 Reflects the general type of the charge point's location. May be used for user information.
 
@@ -1229,3 +1235,24 @@ Example: "This station will be running as of tomorrow. Today it is still planned
 |===
 
 NOTE: The scheduled status is purely informational. When the status actually changes, the CPO must push an update to the EVSEs `status` field itself.
+
+[[mod_locations_vehicletype_enum]]
+==== VehicleType _OpenEnum_
+
+A categorization of vehicles to indicate which type of vehicles can use a certain EVSE.
+
+[cols="3,10",options="header"]
+|===
+| Value | Description
+| MOTORCYCLE | A motorcycle
+| PERSONAL_VEHICLE | A personal vehicle, a passenger car
+| PERSONAL_VEHICLE_WITH_TRAILER | A personal vehicle with a trailer attached
+| VAN | A light-duty van with a height smaller than 275 cm
+| SEMI_TRACTOR | A heavy-duty tractor unit without a trailer
+| RIGID | A heavy-duty truck without an articulation point
+| TRUCK_WITH_TRAILER | A heavy-duty truck (tractor or rigid) with a trailer attached
+| BUS | A bus or a motor coach
+| DISABLED | A vehicle with a permit for parking spaces for people with disabilities
+|===
+
+NOTE: It may seem surprising that OCPI uses a custom vehicle categorization scheme rather than one defined in another specification. During OCPI 3.0 development it appeared however that existing classifications, like the UNECE Classification and Definition of Vehicles, are overly detailed and technical and offer little help in making clear which vehicles can use a certain EVSE. For OCPI 3.0 we opted for a deliberately common sense based categorization that we believe will be easier to use for Drivers and CPOs.
